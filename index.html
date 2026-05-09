@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>早朝シフト管理</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="シフト管理" />
+  <meta name="theme-color" content="#0f0e11" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0f0e11;--surface:#1a1820;--surface2:#221f2a;--border:#2e2a38;--accent:#c8a96e;--accent2:#7e6baf;--plus:#5dbf8a;--minus:#e06b6b;--text:#e8e2f0;--muted:#7a7488;--radius:12px;--safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom)}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;-webkit-tap-highlight-color:transparent}
+    .app{min-height:100vh;padding-bottom:calc(80px + var(--safe-bottom))}
+
+    /* HEADER */
+    .header{background:linear-gradient(135deg,#1a1820 0%,#221830 100%);border-bottom:1px solid var(--border);padding:calc(16px + var(--safe-top)) 20px 20px;position:sticky;top:0;z-index:10}
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+    .brand-icon{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+    .brand-name{font-size:16px;font-weight:700;color:var(--accent);letter-spacing:.05em}
+    .save-indicator{margin-left:auto;font-size:11px;color:var(--plus);opacity:0;transition:opacity .3s}
+    .save-indicator.show{opacity:1}
+    .header-nav{display:flex;align-items:center;gap:10px;margin-top:12px}
+    .back-btn{font-size:13px;color:var(--accent);background:transparent;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:4px}
+    .month-nav{display:flex;align-items:center;justify-content:space-between;flex:1}
+    .month-title{font-size:22px;font-weight:900;letter-spacing:-.02em}
+    .staff-name-header{font-size:13px;color:var(--muted);margin-top:2px}
+    .nav-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+    .nav-btn:active{background:var(--surface2);border-color:var(--accent)}
+    .monthly-summary{margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+    .summary-label{font-size:13px;color:var(--muted);font-weight:500}
+    .summary-sub{font-size:11px;color:var(--muted);margin-top:2px}
+    .summary-amount{font-family:'DM Mono',monospace;font-size:22px;font-weight:500}
+    .summary-amount .unit{font-size:13px;color:var(--muted);margin-left:4px}
+
+    /* STAFF LIST */
+    .staff-list{padding:16px 20px 0;display:flex;flex-direction:column;gap:10px}
+    .staff-list-title{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+    .staff-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .15s}
+    .staff-card:active{border-color:var(--accent)}
+    .staff-card-left{display:flex;align-items:center;gap:12px}
+    .staff-avatar{width:40px;height:40px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff}
+    .staff-card-name{font-size:16px;font-weight:700}
+    .staff-card-sub{font-size:12px;color:var(--muted);margin-top:2px}
+    .staff-card-arrow{color:var(--muted);font-size:18px}
+    .add-staff-btn{background:transparent;border:1px dashed var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--muted);font-family:'Zen Kaku Gothic New',sans-serif;font-size:14px;width:100%;transition:all .15s}
+    .add-staff-btn:active{border-color:var(--accent);color:var(--accent)}
+
+    /* ADD STAFF MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+    .modal-overlay.hidden{display:none}
+    .modal{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px calc(24px + var(--safe-bottom));width:100%;max-width:500px}
+    .modal-title{font-size:18px;font-weight:700;margin-bottom:16px}
+    .modal-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;font-size:18px;padding:14px 16px;outline:none;margin-bottom:12px}
+    .modal-input:focus{border-color:var(--accent2)}
+    .modal-btns{display:flex;gap:10px}
+    .modal-ok{flex:1;padding:14px;border-radius:10px;border:none;background:var(--accent2);color:#fff;font-family:'Zen Kaku Gothic New',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+    .modal-cancel{flex:1;padding:14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Zen Kaku Gothic New',sans-serif;font-size:15px;cursor:pointer}
+
+    /* CALENDAR */
+    .calendar{padding:16px 20px 0;display:flex;flex-direction:column;gap:8px}
+    .day-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .15s}
+    .day-card.selected{border-color:var(--accent2)}
+    .day-card.holiday{opacity:.5}
+    .day-header{display:flex;align-items:center;padding:12px 16px;cursor:pointer;gap:12px;user-select:none}
+    .day-number{font-size:22px;font-weight:900;width:36px;line-height:1}
+    .day-name{font-size:12px;color:var(--muted);width:20px}
+    .day-sat{color:#6b9fe0}
+    .day-sun{color:var(--minus)}
+    .day-times{flex:1;display:flex;gap:8px;align-items:center}
+    .time-badge{font-family:'DM Mono',monospace;font-size:12px;background:var(--surface2);border-radius:6px;padding:4px 8px;color:var(--muted)}
+    .time-badge.has{color:var(--text)}
+    .time-arrow{color:var(--border);font-size:12px}
+    .day-amount{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;min-width:72px;text-align:right}
+    .amount-plus{color:var(--plus)}
+    .amount-minus{color:var(--minus)}
+    .amount-zero{color:var(--muted)}
+    .holiday-badge{font-size:11px;background:#2a1f1f;color:var(--minus);border-radius:6px;padding:3px 8px}
+    .day-detail{border-top:1px solid var(--border);padding:16px;background:var(--surface2);display:flex;flex-direction:column;gap:12px}
+    .time-row{display:flex;gap:12px}
+    .time-input-group{flex:1;display:flex;flex-direction:column;gap:6px}
+    .time-label{font-size:11px;color:var(--muted);letter-spacing:.08em;font-weight:700;text-transform:uppercase}
+    .time-display{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+    .time-display.empty{color:var(--muted)}
+    .time-slots{display:flex;flex-wrap:wrap;gap:4px;max-height:160px;overflow-y:auto;padding:2px;margin-top:4px}
+    .slot-btn{font-family:'DM Mono',monospace;font-size:12px;padding:7px 4px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .1s;flex:0 0 calc(50% - 2px);text-align:center}
+    .slot-btn.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+    .clear-btn{font-size:11px;color:var(--minus);background:transparent;border:none;cursor:pointer;text-align:left;padding:0}
+    .calc-result{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+    .calc-row{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+    .calc-key{color:var(--muted)}
+    .calc-val{font-family:'DM Mono',monospace;font-weight:500}
+    .calc-divider{height:1px;background:var(--border);margin:4px 0}
+    .calc-total{display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:700}
+    .calc-note{font-size:11px;color:var(--muted);margin-top:4px}
+    .holiday-btn{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Zen Kaku Gothic New',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;letter-spacing:.05em}
+    .holiday-btn.active,.holiday-btn:active{background:#2a1f1f;color:var(--minus);border-color:var(--minus)}
+    .delete-staff-btn{width:100%;padding:10px;border-radius:8px;border:1px solid #3a1f1f;background:transparent;color:#a05050;font-family:'Zen Kaku Gothic New',sans-serif;font-size:12px;cursor:pointer;margin-top:4px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header" id="header"></div>
+  <div id="main"></div>
+</div>
+
+<!-- Add Staff Modal -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">スタッフを追加</div>
+    <input class="modal-input" id="staffNameInput" type="text" placeholder="名前を入力..." />
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="modal-ok" onclick="addStaff()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var STANDARD_START = 9 * 60;
+var STANDARD_END = 18 * 60;
+var RATE = 900;
+var MONTHS = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+var DAYS = ["日","月","火","水","木","金","土"];
+var TIME_SLOTS = [];
+for (var h = 5; h <= 22; h++) {
+  TIME_SLOTS.push((h < 10 ? "0" : "") + h + ":00");
+  TIME_SLOTS.push((h < 10 ? "0" : "") + h + ":30");
+}
+
+// STATE
+var currentView = "staff"; // "staff" or "calendar"
+var currentStaffId = null;
+var viewYear = new Date().getFullYear();
+var viewMonth = new Date().getMonth();
+var selectedDay = null;
+
+function getStaff() {
+  try { var s = localStorage.getItem("staff_list"); return s ? JSON.parse(s) : []; }
+  catch(e) { return []; }
+}
+function saveStaff(list) {
+  localStorage.setItem("staff_list", JSON.stringify(list));
+}
+function getRecords(staffId) {
+  try { var s = localStorage.getItem("records_" + staffId + "_" + viewYear + "_" + viewMonth); return s ? JSON.parse(s) : {}; }
+  catch(e) { return {}; }
+}
+function saveRecords(staffId, records) {
+  localStorage.setItem("records_" + staffId + "_" + viewYear + "_" + viewMonth, JSON.stringify(records));
+  var el = document.getElementById("saveIndicator");
+  if (el) { el.classList.add("show"); setTimeout(function(){ el.classList.remove("show"); }, 1500); }
+}
+
+function toMin(t) { var p = t.split(":"); return parseInt(p[0]) * 60 + parseInt(p[1]); }
+function calcDay(r) {
+  if (!r || r.holiday || !r.start || !r.end) return null;
+  var s = toMin(r.start), e = toMin(r.end);
+  var earlyIn = Math.max(0, STANDARD_START - s);
+  var earlyOut = Math.max(0, STANDARD_END - e);
+  var slots = Math.floor((earlyIn - earlyOut) / 30);
+  return { earlyIn: earlyIn, earlyOut: earlyOut, slots: slots, amount: slots * RATE };
+}
+function calcMonthly(staffId) {
+  var total = 0;
+  var records = getRecords(staffId);
+  var days = new Date(viewYear, viewMonth + 1, 0).getDate();
+  for (var d = 1; d <= days; d++) { var c = calcDay(records[d]); if (c) total += c.amount; }
+  return total;
+}
+function getInitial(name) { return name ? name.charAt(0) : "?"; }
+function getColor(id) {
+  var colors = ["#7e6baf","#5dbf8a","#c8a96e","#e06b6b","#6b9fe0","#bf8a5d","#8abf5d"];
+  var idx = 0;
+  for (var i = 0; i < id.length; i++) idx += id.charCodeAt(i);
+  return colors[idx % colors.length];
+}
+
+// MODAL
+function openModal() {
+  document.getElementById("modalOverlay").classList.remove("hidden");
+  setTimeout(function(){ document.getElementById("staffNameInput").focus(); }, 100);
+}
+function closeModal() {
+  document.getElementById("modalOverlay").classList.add("hidden");
+  document.getElementById("staffNameInput").value = "";
+}
+function addStaff() {
+  var name = document.getElementById("staffNameInput").value.trim();
+  if (!name) return;
+  var list = getStaff();
+  var id = "staff_" + Date.now();
+  list.push({ id: id, name: name });
+  saveStaff(list);
+  closeModal();
+  renderStaffList();
+}
+
+// NAVIGATION
+function goToStaff(staffId) {
+  currentView = "calendar";
+  currentStaffId = staffId;
+  selectedDay = null;
+  renderCalendar();
+}
+function goBack() {
+  currentView = "staff";
+  currentStaffId = null;
+  selectedDay = null;
+  renderStaffList();
+}
+function changeMonth(dir) {
+  viewMonth += dir;
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  selectedDay = null;
+  if (currentView === "calendar") renderCalendar();
+  else renderStaffList();
+}
+
+// STAFF LIST VIEW
+function renderStaffList() {
+  var list = getStaff();
+  var header = document.getElementById("header");
+  header.innerHTML = '<div class="brand"><div class="brand-icon">✂️</div><div class="brand-name">早朝シフト管理</div></div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">'
+    + '<div style="font-size:13px;color:var(--muted)">スタッフ一覧</div>'
+    + '<div style="display:flex;gap:8px"><button class="nav-btn" onclick="changeMonth(-1)">‹</button>'
+    + '<div style="font-size:16px;font-weight:700;display:flex;align-items:center;padding:0 8px">' + viewYear + '年 ' + MONTHS[viewMonth] + '</div>'
+    + '<button class="nav-btn" onclick="changeMonth(1)">›</button></div></div>';
+
+  var html = '<div class="staff-list"><div class="staff-list-title">スタッフ</div>';
+  if (list.length === 0) {
+    html += '<div style="color:var(--muted);font-size:14px;padding:16px 0">まだスタッフがいません</div>';
+  }
+  list.forEach(function(s) {
+    var total = calcMonthly(s.id);
+    var totalStr = (total >= 0 ? "+" : "") + total.toLocaleString() + "円";
+    var totalColor = total > 0 ? "var(--plus)" : total < 0 ? "var(--minus)" : "var(--muted)";
+    html += '<div class="staff-card" onclick="goToStaff(\'' + s.id + '\')">'
+      + '<div class="staff-card-left">'
+      + '<div class="staff-avatar" style="background:' + getColor(s.id) + '">' + getInitial(s.name) + '</div>'
+      + '<div><div class="staff-card-name">' + s.name + '</div>'
+      + '<div class="staff-card-sub">今月の精算: <span style="color:' + totalColor + ';font-family:\'DM Mono\',monospace">' + totalStr + '</span></div>'
+      + '</div></div>'
+      + '<div class="staff-card-arrow">›</div></div>';
+  });
+  html += '<button class="add-staff-btn" onclick="openModal()"><span style="font-size:20px">＋</span> スタッフを追加する</button>';
+  html += '</div>';
+  document.getElementById("main").innerHTML = html;
+}
+
+// CALENDAR VIEW
+function setTime(d, field, value) {
+  var records = getRecords(currentStaffId);
+  if (!records[d]) records[d] = {};
+  records[d][field] = value;
+  saveRecords(currentStaffId, records);
+  selectedDay = d;
+  renderCalendar();
+}
+function toggleDay(d) { selectedDay = selectedDay === d ? null : d; renderCalendar(); }
+function toggleHoliday(d) {
+  var records = getRecords(currentStaffId);
+  if (!records[d]) records[d] = {};
+  records[d].holiday = !records[d].holiday;
+  if (records[d].holiday) { records[d].start = ""; records[d].end = ""; }
+  saveRecords(currentStaffId, records);
+  renderCalendar();
+}
+function deleteStaff() {
+  var list = getStaff();
+  var staff = list.find(function(s){ return s.id === currentStaffId; });
+  if (!staff) return;
+  if (!confirm(staff.name + " を削除しますか？")) return;
+  var newList = list.filter(function(s){ return s.id !== currentStaffId; });
+  saveStaff(newList);
+  goBack();
+}
+
+function renderCalendar() {
+  var list = getStaff();
+  var staff = list.find(function(s){ return s.id === currentStaffId; });
+  if (!staff) { goBack(); return; }
+  var records = getRecords(currentStaffId);
+  var days = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  // Header
+  var total = calcMonthly(currentStaffId);
+  var totalColor = total >= 0 ? "var(--plus)" : "var(--minus)";
+  var header = document.getElementById("header");
+  header.innerHTML = '<div class="brand"><div class="brand-icon">✂️</div><div class="brand-name">早朝シフト管理</div><div class="save-indicator" id="saveIndicator">✓ 保存しました</div></div>'
+    + '<div class="header-nav">'
+    + '<button class="back-btn" onclick="goBack()">‹ 一覧</button>'
+    + '<div class="month-nav"><button class="nav-btn" onclick="changeMonth(-1)">‹</button>'
+    + '<div><div class="month-title">' + viewYear + '年 ' + MONTHS[viewMonth] + '</div><div class="staff-name-header">' + staff.name + '</div></div>'
+    + '<button class="nav-btn" onclick="changeMonth(1)">›</button></div></div>'
+    + '<div class="monthly-summary"><div><div class="summary-label">今月の精算合計</div><div class="summary-sub">早出手当 − 早退返金</div></div>'
+    + '<div class="summary-amount" style="color:' + totalColor + '">' + (total >= 0 ? "+" : "") + total.toLocaleString() + '<span class="unit">円</span></div></div>';
+
+  // Calendar
+  var cal = document.createElement("div");
+  cal.className = "calendar";
+
+  for (var d = 1; d <= days; d++) {
+    var r = records[d] || {};
+    var dow = new Date(viewYear, viewMonth, d).getDay();
+    var c = calcDay(r);
+    var isSelected = selectedDay === d;
+    var dowClass = dow === 0 ? "day-sun" : dow === 6 ? "day-sat" : "";
+
+    var card = document.createElement("div");
+    card.className = "day-card" + (isSelected ? " selected" : "") + (r.holiday ? " holiday" : "");
+
+    var amountHTML = '<div class="day-amount amount-zero">—</div>';
+    if (c !== null) {
+      var cls = c.amount > 0 ? "amount-plus" : c.amount < 0 ? "amount-minus" : "amount-zero";
+      amountHTML = '<div class="day-amount ' + cls + '">' + (c.amount >= 0 ? "+" : "") + c.amount.toLocaleString() + "円</div>";
+    }
+    var timesHTML = r.holiday
+      ? '<div style="flex:1"><span class="holiday-badge">休日</span></div>'
+      : '<div class="day-times"><span class="time-badge ' + (r.start ? "has" : "") + '">' + (r.start || "--:--") + '</span><span class="time-arrow">→</span><span class="time-badge ' + (r.end ? "has" : "") + '">' + (r.end || "--:--") + '</span></div>';
+
+    card.innerHTML = '<div class="day-header" onclick="toggleDay(' + d + ')"><div class="day-number ' + dowClass + '">' + d + '</div><div class="day-name ' + dowClass + '">' + DAYS[dow] + '</div>' + timesHTML + (r.holiday ? "" : amountHTML) + '</div>';
+
+    if (isSelected) {
+      var detail = document.createElement("div");
+      detail.className = "day-detail";
+      var pickerHTML = '<div class="time-row">';
+      ["start", "end"].forEach(function(field) {
+        var current = r[field] || "";
+        var label = field === "start" ? "出勤時間" : "退勤時間";
+        var slotsHTML = TIME_SLOTS.map(function(t) {
+          return '<button class="slot-btn' + (current === t ? " active" : "") + '" onclick="setTime(' + d + ',\'' + field + '\',\'' + t + '\')">' + t + '</button>';
+        }).join("");
+        var clearHTML = current ? '<button class="clear-btn" onclick="setTime(' + d + ',\'' + field + '\',\'\')">✕ クリア</button>' : "";
+        pickerHTML += '<div class="time-input-group"><span class="time-label">' + label + '</span><div class="time-display' + (current ? "" : " empty") + '">' + (current || "--:--") + '</div>' + clearHTML + '<div class="time-slots">' + slotsHTML + '</div></div>';
+      });
+      pickerHTML += '</div>';
+
+      var calcHTML = "";
+      if (r.start && r.end && !r.holiday && c) {
+        var tColor = c.amount > 0 ? "var(--plus)" : c.amount < 0 ? "var(--minus)" : "var(--muted)";
+        var noteText = c.slots > 0 ? "スタッフへ +" + (c.slots * RATE) + "円 支給" : c.slots < 0 ? "会社へ " + (Math.abs(c.slots) * RATE) + "円 返金" : "";
+        calcHTML = '<div class="calc-result">'
+          + '<div class="calc-row"><span class="calc-key">早出時間</span><span class="calc-val" style="color:' + (c.earlyIn > 0 ? "var(--plus)" : "var(--muted)") + '">' + (c.earlyIn > 0 ? "+" + c.earlyIn + "分 (" + Math.floor(c.earlyIn / 30) + "コマ × 900円)" : "なし") + '</span></div>'
+          + '<div class="calc-row"><span class="calc-key">早退返金</span><span class="calc-val" style="color:' + (c.earlyOut > 0 ? "var(--minus)" : "var(--muted)") + '">' + (c.earlyOut > 0 ? "−" + c.earlyOut + "分 (" + Math.floor(c.earlyOut / 30) + "コマ × 900円)" : "なし") + '</span></div>'
+          + '<div class="calc-divider"></div>'
+          + '<div class="calc-total"><span style="color:var(--muted);font-size:13px">本日の精算</span><span style="color:' + tColor + ';font-family:\'DM Mono\',monospace">' + (c.amount >= 0 ? "+" : "") + c.amount.toLocaleString() + "円</span></div>"
+          + (noteText ? '<div class="calc-note">' + noteText + '</div>' : "")
+          + '</div>';
+      }
+
+      detail.innerHTML = pickerHTML + calcHTML
+        + '<button class="holiday-btn ' + (r.holiday ? "active" : "") + '" onclick="toggleHoliday(' + d + ')">' + (r.holiday ? "✕ 休日を解除" : "休日にする") + '</button>';
+      card.appendChild(detail);
+    }
+    cal.appendChild(card);
+  }
+
+  // Delete staff button at bottom
+  var deleteBtn = document.createElement("div");
+  deleteBtn.style.padding = "8px 20px 0";
+  deleteBtn.innerHTML = '<button class="delete-staff-btn" onclick="deleteStaff()">このスタッフを削除する</button>';
+  cal.appendChild(deleteBtn);
+
+  document.getElementById("main").innerHTML = "";
+  document.getElementById("main").appendChild(cal);
+}
+
+// INIT
+renderStaffList();
+</script>
+</body>
+</html>
