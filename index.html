@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>早朝シフト管理</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="シフト管理" />
+  <meta name="theme-color" content="#0f0e11" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0f0e11;--surface:#1a1820;--surface2:#221f2a;--border:#2e2a38;--accent:#c8a96e;--accent2:#7e6baf;--plus:#5dbf8a;--minus:#e06b6b;--text:#e8e2f0;--muted:#7a7488;--radius:12px;--safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom)}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;-webkit-tap-highlight-color:transparent}
+    .app{min-height:100vh;padding-bottom:calc(80px + var(--safe-bottom))}
+    .header{background:linear-gradient(135deg,#1a1820 0%,#221830 100%);border-bottom:1px solid var(--border);padding:calc(16px + var(--safe-top)) 20px 20px;position:sticky;top:0;z-index:10}
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .brand-icon{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+    .brand-name{font-size:16px;font-weight:700;color:var(--accent);letter-spacing:.05em}
+    .save-indicator{margin-left:auto;font-size:11px;color:var(--plus);opacity:0;transition:opacity .3s}
+    .save-indicator.show{opacity:1}
+    .month-nav{display:flex;align-items:center;justify-content:space-between}
+    .month-title{font-size:24px;font-weight:900;letter-spacing:-.02em}
+    .nav-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+    .nav-btn:active{background:var(--surface2);border-color:var(--accent)}
+    .monthly-summary{margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+    .summary-label{font-size:13px;color:var(--muted);font-weight:500}
+    .summary-sub{font-size:11px;color:var(--muted);margin-top:2px}
+    .summary-amount{font-family:'DM Mono',monospace;font-size:22px;font-weight:500}
+    .summary-amount .unit{font-size:13px;color:var(--muted);margin-left:4px}
+    .calendar{padding:16px 20px 0;display:flex;flex-direction:column;gap:8px}
+    .day-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .15s}
+    .day-card.selected{border-color:var(--accent2)}
+    .day-card.holiday{opacity:.5}
+    .day-header{display:flex;align-items:center;padding:12px 16px;cursor:pointer;gap:12px;user-select:none}
+    .day-number{font-size:22px;font-weight:900;width:36px;line-height:1}
+    .day-name{font-size:12px;color:var(--muted);width:20px}
+    .day-sat{color:#6b9fe0}
+    .day-sun{color:var(--minus)}
+    .day-times{flex:1;display:flex;gap:8px;align-items:center}
+    .time-badge{font-family:'DM Mono',monospace;font-size:12px;background:var(--surface2);border-radius:6px;padding:4px 8px;color:var(--muted)}
+    .time-badge.has{color:var(--text)}
+    .time-arrow{color:var(--border);font-size:12px}
+    .day-amount{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;min-width:72px;text-align:right}
+    .amount-plus{color:var(--plus)}
+    .amount-minus{color:var(--minus)}
+    .amount-zero{color:var(--muted)}
+    .holiday-badge{font-size:11px;background:#2a1f1f;color:var(--minus);border-radius:6px;padding:3px 8px}
+    .day-detail{border-top:1px solid var(--border);padding:16px;background:var(--surface2);display:flex;flex-direction:column;gap:12px}
+    .time-row{display:flex;gap:12px}
+    .time-input-group{flex:1;display:flex;flex-direction:column;gap:6px}
+    .time-label{font-size:11px;color:var(--muted);letter-spacing:.08em;font-weight:700;text-transform:uppercase}
+    .time-display{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+    .time-display.empty{color:var(--muted)}
+    .time-slots{display:flex;flex-wrap:wrap;gap:4px;max-height:160px;overflow-y:auto;padding:2px;margin-top:4px}
+    .slot-btn{font-family:'DM Mono',monospace;font-size:12px;padding:7px 4px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .1s;flex:0 0 calc(50% - 2px);text-align:center}
+    .slot-btn.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+    .clear-btn{font-size:11px;color:var(--minus);background:transparent;border:none;cursor:pointer;text-align:left;padding:0}
+    .calc-result{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+    .calc-row{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+    .calc-key{color:var(--muted)}
+    .calc-val{font-family:'DM Mono',monospace;font-weight:500}
+    .calc-divider{height:1px;background:var(--border);margin:4px 0}
+    .calc-total{display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:700}
+    .calc-note{font-size:11px;color:var(--muted);margin-top:4px}
+    .holiday-btn{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Zen Kaku Gothic New',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;letter-spacing:.05em}
+    .holiday-btn.active,.holiday-btn:active{background:#2a1f1f;color:var(--minus);border-color:var(--minus)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">✂️</div>
+      <div class="brand-name">早朝シフト管理</div>
+      <div class="save-indicator" id="saveIndicator">✓ 保存しました</div>
+    </div>
+    <div class="month-nav">
+      <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+      <div class="month-title" id="monthTitle"></div>
+      <button class="nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="monthly-summary">
+      <div>
+        <div class="summary-label">今月の精算合計</div>
+        <div class="summary-sub">早出手当 − 早退返金</div>
+      </div>
+      <div class="summary-amount" id="monthlyTotal">±0<span class="unit">円</span></div>
+    </div>
+  </div>
+  <div class="calendar" id="calendar"></div>
+</div>
+<script>
+var STANDARD_START = 9 * 60;
+var STANDARD_END = 18 * 60;
+var RATE = 900;
+var MONTHS = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+var DAYS = ["日","月","火","水","木","金","土"];
+var TIME_SLOTS = [];
+for (var h = 5; h <= 22; h++) {
+  TIME_SLOTS.push((h < 10 ? "0" : "") + h + ":00");
+  TIME_SLOTS.push((h < 10 ? "0" : "") + h + ":30");
+}
+
+var viewYear = new Date().getFullYear();
+var viewMonth = new Date().getMonth();
+var selectedDay = null;
+var records = {};
+
+function storageKey() { return "shift_" + viewYear + "_" + viewMonth; }
+function loadRecords() {
+  try { var r = localStorage.getItem(storageKey()); records = r ? JSON.parse(r) : {}; }
+  catch(e) { records = {}; }
+}
+function saveRecords() {
+  try {
+    localStorage.setItem(storageKey(), JSON.stringify(records));
+    var el = document.getElementById("saveIndicator");
+    el.classList.add("show");
+    setTimeout(function(){ el.classList.remove("show"); }, 1500);
+  } catch(e) {}
+}
+function toMin(t) { var p = t.split(":"); return parseInt(p[0]) * 60 + parseInt(p[1]); }
+function calcDay(r) {
+  if (!r || r.holiday || !r.start || !r.end) return null;
+  var s = toMin(r.start), e = toMin(r.end);
+  var earlyIn = Math.max(0, STANDARD_START - s);
+  var earlyOut = Math.max(0, STANDARD_END - e);
+  var slots = Math.floor((earlyIn - earlyOut) / 30);
+  return { earlyIn: earlyIn, earlyOut: earlyOut, slots: slots, amount: slots * RATE };
+}
+function calcMonthly() {
+  var total = 0;
+  var days = new Date(viewYear, viewMonth + 1, 0).getDate();
+  for (var d = 1; d <= days; d++) { var c = calcDay(records[d]); if (c) total += c.amount; }
+  return total;
+}
+
+function setTime(d, field, value) {
+  if (!records[d]) records[d] = {};
+  records[d][field] = value;
+  saveRecords();
+  selectedDay = d;
+  render();
+}
+function toggleDay(d) { selectedDay = selectedDay === d ? null : d; render(); }
+function toggleHoliday(d) {
+  if (!records[d]) records[d] = {};
+  records[d].holiday = !records[d].holiday;
+  if (records[d].holiday) { records[d].start = ""; records[d].end = ""; }
+  saveRecords();
+  render();
+}
+function changeMonth(dir) {
+  viewMonth += dir;
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  selectedDay = null;
+  loadRecords();
+  render();
+}
+
+function render() {
+  var days = new Date(viewYear, viewMonth + 1, 0).getDate();
+  document.getElementById("monthTitle").textContent = viewYear + "年 " + MONTHS[viewMonth];
+  var total = calcMonthly();
+  var totalEl = document.getElementById("monthlyTotal");
+  totalEl.style.color = total >= 0 ? "var(--plus)" : "var(--minus)";
+  totalEl.innerHTML = (total >= 0 ? "+" : "") + total.toLocaleString() + '<span class="unit">円</span>';
+  var cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+
+  for (var d = 1; d <= days; d++) {
+    var r = records[d] || {};
+    var dow = new Date(viewYear, viewMonth, d).getDay();
+    var c = calcDay(r);
+    var isSelected = selectedDay === d;
+    var dowClass = dow === 0 ? "day-sun" : dow === 6 ? "day-sat" : "";
+
+    var card = document.createElement("div");
+    card.className = "day-card" + (isSelected ? " selected" : "") + (r.holiday ? " holiday" : "");
+
+    var amountHTML = '<div class="day-amount amount-zero">—</div>';
+    if (c !== null) {
+      var cls = c.amount > 0 ? "amount-plus" : c.amount < 0 ? "amount-minus" : "amount-zero";
+      amountHTML = '<div class="day-amount ' + cls + '">' + (c.amount >= 0 ? "+" : "") + c.amount.toLocaleString() + "円</div>";
+    }
+    var timesHTML = r.holiday
+      ? '<div style="flex:1"><span class="holiday-badge">休日</span></div>'
+      : '<div class="day-times"><span class="time-badge ' + (r.start ? "has" : "") + '">' + (r.start || "--:--") + '</span><span class="time-arrow">→</span><span class="time-badge ' + (r.end ? "has" : "") + '">' + (r.end || "--:--") + '</span></div>';
+
+    card.innerHTML = '<div class="day-header" onclick="toggleDay(' + d + ')"><div class="day-number ' + dowClass + '">' + d + '</div><div class="day-name ' + dowClass + '">' + DAYS[dow] + '</div>' + timesHTML + (r.holiday ? "" : amountHTML) + '</div>';
+
+    if (isSelected) {
+      var detail = document.createElement("div");
+      detail.className = "day-detail";
+
+      // Time pickers
+      var pickerHTML = '<div class="time-row">';
+      ["start", "end"].forEach(function(field) {
+        var current = r[field] || "";
+        var label = field === "start" ? "出勤時間" : "退勤時間";
+        var slotsHTML = TIME_SLOTS.map(function(t) {
+          var isActive = current === t;
+          return '<button class="slot-btn' + (isActive ? " active" : "") + '" onclick="setTime(' + d + ',\'' + field + '\',\'' + t + '\')">' + t + '</button>';
+        }).join("");
+        var clearHTML = current ? '<button class="clear-btn" onclick="setTime(' + d + ',\'' + field + '\',\'\')">✕ クリア</button>' : "";
+        pickerHTML += '<div class="time-input-group"><span class="time-label">' + label + '</span><div class="time-display' + (current ? "" : " empty") + '">' + (current || "--:--") + '</div>' + clearHTML + '<div class="time-slots">' + slotsHTML + '</div></div>';
+      });
+      pickerHTML += '</div>';
+
+      var calcHTML = "";
+      if (r.start && r.end && !r.holiday && c) {
+        var totalColor = c.amount > 0 ? "var(--plus)" : c.amount < 0 ? "var(--minus)" : "var(--muted)";
+        var noteText = c.slots > 0 ? "スタッフへ +" + (c.slots * RATE) + "円 支給" : c.slots < 0 ? "会社へ " + (Math.abs(c.slots) * RATE) + "円 返金" : "";
+        calcHTML = '<div class="calc-result">'
+          + '<div class="calc-row"><span class="calc-key">早出時間</span><span class="calc-val" style="color:' + (c.earlyIn > 0 ? "var(--plus)" : "var(--muted)") + '">' + (c.earlyIn > 0 ? "+" + c.earlyIn + "分 (" + Math.floor(c.earlyIn / 30) + "コマ × 900円)" : "なし") + '</span></div>'
+          + '<div class="calc-row"><span class="calc-key">早退返金</span><span class="calc-val" style="color:' + (c.earlyOut > 0 ? "var(--minus)" : "var(--muted)") + '">' + (c.earlyOut > 0 ? "−" + c.earlyOut + "分 (" + Math.floor(c.earlyOut / 30) + "コマ × 900円)" : "なし") + '</span></div>'
+          + '<div class="calc-divider"></div>'
+          + '<div class="calc-total"><span style="color:var(--muted);font-size:13px">本日の精算</span><span style="color:' + totalColor + ';font-family:\'DM Mono\',monospace">' + (c.amount >= 0 ? "+" : "") + c.amount.toLocaleString() + "円</span></div>"
+          + (noteText ? '<div class="calc-note">' + noteText + '</div>' : "")
+          + '</div>';
+      }
+
+      detail.innerHTML = pickerHTML + calcHTML + '<button class="holiday-btn ' + (r.holiday ? "active" : "") + '" onclick="toggleHoliday(' + d + ')">' + (r.holiday ? "✕ 休日を解除" : "休日にする") + '</button>';
+      card.appendChild(detail);
+    }
+    cal.appendChild(card);
+  }
+}
+
+loadRecords();
+render();
+</script>
+</body>
+</html>
